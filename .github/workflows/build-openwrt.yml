@@ -44,7 +44,7 @@ jobs:
         run: python3 -m build_helper --task prepare
 
       - name: 上传
-        uses: ./../../../../../opt/OpenWrt-K/.github/action/upload
+        uses: ./.github/action/upload
 
   base-builds:
     runs-on: ubuntu-22.04
@@ -91,7 +91,7 @@ jobs:
 
       - name: 上传
         if: success() || failure()
-        uses: ./../../../../../opt/OpenWrt-K/.github/action/upload
+        uses: ./.github/action/upload
 
   build-packages:
     runs-on: ubuntu-22.04
@@ -126,7 +126,7 @@ jobs:
 
       - name: 上传
         if: success() || failure()
-        uses: ./../../../../../opt/OpenWrt-K/.github/action/upload
+        uses: ./.github/action/upload
 
   build-ImageBuilder:
     runs-on: ubuntu-22.04
@@ -161,7 +161,7 @@ jobs:
 
       - name: 上传
         if: success() || failure()
-        uses: ./../../../../../opt/OpenWrt-K/.github/action/upload
+        uses: ./.github/action/upload
 
   build-images-releases:
     runs-on: ubuntu-22.04
@@ -187,4 +187,4 @@ jobs:
 
       - name: 上传
         if: success() || failure()
-        uses: ./../../../../../opt/OpenWrt-K/.github/action/upload
+        uses: ./.github/action/upload
