@@ -10,7 +10,9 @@ from .logger import logger
 from .paths import paths
 
 
-def parse_config(path: str, prefixs: tuple[str,...]|list[str]) -> dict[str, str | list[str] | bool]:
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+def parse_config(path: str, prefixs: Tuple[str,...] | List[str]) -> Dict[str, Union[str, List[str], bool]]:
     if not os.path.isfile(path):
         msg = f"配置文件 {path} 不存在"
         raise ConfigParseError(msg)
@@ -21,16 +23,16 @@ def parse_config(path: str, prefixs: tuple[str,...]|list[str]) -> dict[str, str 
             for line in f:
                 if line.startswith(prefix+"="):
                     content = line.split("=")[1].strip()
-                    match content.lower():
-                        case "true":
-                            config[prefix] = True
-                        case "false":
-                            config[prefix] = False
-                        case _:
-                            if "," in content:
-                                config[prefix] = [v.strip() for v in content.split(",")]
-                            else:
-                                config[prefix] = content
+                    lower_content = content.lower()
+                    if lower_content == "true":
+                        config[prefix] = True
+                    elif lower_content == "false":
+                        config[prefix] = False
+                    else:
+                        if "," in content:
+                            config[prefix] = [v.strip() for v in content.split(",")]
+                        else:
+                            config[prefix] = content
                     break
             else:
                 msg = f"无法在配置文件 {path} 中找到配置项{prefix}"

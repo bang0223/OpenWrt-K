@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024-2025 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: MIT
 import json
+from typing import Dict, Optional
 
 import httpx
 
@@ -14,7 +15,7 @@ HEADER = {
 }
 
 
-def request_get(url: str, retry: int = 6, headers: dict | None = None) -> str | None:
+def request_get(url: str, retry: int = 6, headers: Optional[Dict[str, str]] = None) -> Optional[str]:
     for i in range(retry):
         try:
             response = httpx.get(url, timeout=10, follow_redirects=True, headers=headers)
@@ -26,10 +27,10 @@ def request_get(url: str, retry: int = 6, headers: dict | None = None) -> str | 
     logger.error("请求失败，重试次数已用完 %s", f"{error.__class__.__name__}: {error!s}")
     return None
 
-def get_gh_repo_last_releases(repo: str, token: str | None = None) -> dict | None:
+def get_gh_repo_last_releases(repo: str, token: Optional[str] = None) -> Optional[Dict]:
     return gh_api_request(f"https://api.github.com/repos/{repo}/releases/latest", token)
 
-def gh_api_request(url: str, token: str | None = None) -> dict | None:
+def gh_api_request(url: str, token: Optional[str] = None) -> Optional[Dict]:
     headers = {
                 "Accept": "application/vnd.github+json",
                 "X-GitHub-Api-Version": "2022-11-28",

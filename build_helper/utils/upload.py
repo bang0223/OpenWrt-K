@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024-2025 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: MIT
 import os
+from typing import List, Optional, Union
 
 import yaml
 
@@ -18,12 +19,12 @@ class UpLoader:
 
     def add(self,
             name: str,
-            path: str | list[str],
-            if_no_files_found: str | None = None,
-            retention_days: int | None = None,
-            compression_level: int | None = None,
-            overwrite: bool | None = None,
-            include_hidden_files: bool | None = None) -> None:
+            path: str,
+            if_no_files_found: Optional[str] = None,
+            retention_days: Optional[int] = None,
+            compression_level: Optional[int] = None,
+            overwrite: Optional[bool] = None,
+            include_hidden_files: Optional[bool] = None) -> None:
         if not path:
             logger.warning(f"添加Artifact {name} 时没有指定任何要上传的文件, 跳过")
             return

@@ -8,7 +8,7 @@ import shutil
 import tarfile
 from datetime import datetime, timedelta, timezone
 from multiprocessing.pool import Pool
-from typing import Any
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import pygit2
 
@@ -23,9 +23,9 @@ from .utils.upload import uploader
 from .utils.utils import parse_config
 
 
-def parse_configs() -> dict[str, dict[str, Any]]:
+def parse_configs() -> Dict[str, Dict[str, Any]]:
     """解析配置文件"""
-    configs: dict[str, dict] = {}
+    configs: Dict[str, Dict[str, Any]] = {}
     for name, path in paths.configs.items():
         logger.info("解析配置: %s", name)
         configs[name] = {"path": path, "name": name}
@@ -84,7 +84,7 @@ def get_matrix(configs: dict[str, dict]) -> str:
         matrix["include"].append({"name": name, "config": gzip.compress(json.dumps(config, separators=(',', ':')).encode("utf-8")).hex().upper()})
     return json.dumps(matrix)
 
-def clone(repo: str, path: str, branch: str | None) -> tuple[str, str | None, str]:
+def clone(repo: str, path: str, branch: Optional[str]) -> Tuple[str, Optional[str], str]:
     logger.info("开始克隆仓库 %s", repo if not branch else f"{repo} (分支: {branch})")
     try:
         pygit2.clone_repository(repo, path, checkout_branch=branch if branch else None, depth=1)
@@ -107,7 +107,7 @@ def prepare(configs: dict[str, dict[str, Any]]) -> None:
                                        *[(pkg["REPOSITORIE"], pkg["BRANCH"]) for config in configs.values() for pkg in config["extpackages"].values()],
                                        *[("https://github.com/sbwml/packages_lang_golang",
                                           config["openwrtext"]["golang_version"]) for config in configs.values()]}
-    cloned_repos: dict[tuple[str, str | None], str] = {}
+    cloned_repos: Dict[Tuple[str, Optional[str]], str] = {}
     with Pool(8) as p:
         for repo, branch, path in p.starmap(clone,[
                                              (repo,
@@ -258,7 +258,7 @@ def prepare_cfg(config: dict[str, Any],
         path = os.path.join(openwrt.path, "package", "cmzj_packages", pkg_name)
         pkg_path = os.path.join(cloned_repos[(pkg["REPOSITORIE"], pkg["BRANCH"])], pkg["PATH"])
         if not os.path.exists(pkg_path):
-            msg = f"找不到{cfg_name}配置中的拓展软件包: {pkg_name} ,这可能是由于仓库 {pkg["REPOSITORIE"]} 目录结构变更导致的,请检查您的拓展软件包配置"
+            msg = f"找不到{cfg_name}配置中的拓展软件包: {pkg_name} ,这可能是由于仓库 {pkg['REPOSITORIE']} 目录结构变更导致的,请检查您的拓展软件包配置"
             raise FileNotFoundError(msg)
         logger.debug("复制拓展软件包 %s 到 %s", pkg_name, path)
         shutil.copytree(os.path.join(cloned_repos[(pkg["REPOSITORIE"], pkg["BRANCH"])], pkg["PATH"]), path, symlinks=True)
@@ -287,7 +287,7 @@ def prepare_cfg(config: dict[str, Any],
     enable_fullcone = openwrt.get_package_config("kmod-nft-fullcone") in ("y", "m")
     if enable_fullcone or enable_sfe:
         logger.info("%s添加952补丁", cfg_name)
-        patch925 = f"952{"-add" if kernel_version != "5.10" else ""}-net-conntrack-events-support-multiple-registrant.patch"
+        patch925 = f"952{'-add' if kernel_version != '5.10' else ''}-net-conntrack-events-support-multiple-registrant.patch"
         shutil.copy2(os.path.join(turboacc_dir, f"hack-{kernel_version}", patch925),
                      os.path.join(openwrt.path, "target", "linux", "generic", f"hack-{kernel_version}", patch925))
         logger.info("%s附加内核配置CONFIG_NF_CONNTRACK_CHAIN_EVENTS", cfg_name)
@@ -307,7 +307,7 @@ def prepare_cfg(config: dict[str, Any],
             f.write("\nCONFIG_SHORTCUT_FE=y")
     if enable_fullcone:
         logger.info("%s添加libnftnl、firewall4、nftables补丁", cfg_name)
-        def get_version(file_path: str, pattern: str) -> str | None:
+        def get_version(file_path: str, pattern: str) -> Optional[str]:
             with open(file_path, encoding='utf-8') as f:
                 content = f.read()
                 match = re.search(pattern, content)
@@ -339,34 +339,33 @@ def prepare_cfg(config: dict[str, Any],
     files_path = os.path.join(openwrt.path, "files")
     shutil.copytree(global_files_path, files_path)
     arch, version = openwrt.get_arch()
-    match arch:
-        case "i386":
-            adg_arch, clash_arch = "386", "linux-386"
-        case "i686":
-            adg_arch, clash_arch = "386", None
-        case "x86_64":
-            adg_arch, clash_arch = "amd64", "linux-amd64"
-        case "mipsel":
-            adg_arch, clash_arch = "mipsel", "linux-mipsle-softfloat"
-        case "mips64el":
-            adg_arch, clash_arch = "mips64el", None
-        case "mips":
-            adg_arch, clash_arch = "mips", "linux-mips-softfloat"
-        case "mips64":
-            adg_arch, clash_arch = "mips64", "linux-mips64"
-        case "arm":
-            if version:
-                adg_arch, clash_arch = f"arm{version}", f"linux-arm{version}"
-            else:
-                adg_arch, clash_arch = "armv5", "linux-armv5"
-        case "aarch64":
-            adg_arch, clash_arch = "arm64", "linux-arm64"
-        case "powerpc":
-            adg_arch, clash_arch = "powerpc", None
-        case "powerpc64":
-            adg_arch, clash_arch = "ppc64", None
-        case _:
-            adg_arch, clash_arch = None, None
+    if arch == "i386":
+        adg_arch, clash_arch = "386", "linux-386"
+    elif arch == "i686":
+        adg_arch, clash_arch = "386", None
+    elif arch == "x86_64":
+        adg_arch, clash_arch = "amd64", "linux-amd64"
+    elif arch == "mipsel":
+        adg_arch, clash_arch = "mipsel", "linux-mipsle-softfloat"
+    elif arch == "mips64el":
+        adg_arch, clash_arch = "mips64el", None
+    elif arch == "mips":
+        adg_arch, clash_arch = "mips", "linux-mips-softfloat"
+    elif arch == "mips64":
+        adg_arch, clash_arch = "mips64", "linux-mips64"
+    elif arch == "arm":
+        if version:
+            adg_arch, clash_arch = f"arm{version}", f"linux-arm{version}"
+        else:
+            adg_arch, clash_arch = "armv5", "linux-armv5"
+    elif arch == "aarch64":
+        adg_arch, clash_arch = "arm64", "linux-arm64"
+    elif arch == "powerpc":
+        adg_arch, clash_arch = "powerpc", None
+    elif arch == "powerpc64":
+        adg_arch, clash_arch = "ppc64", None
+    else:
+        adg_arch, clash_arch = None, None
 
     tmpdir = paths.get_tmpdir()
     dl_tasks: list[DLTask] = []
@@ -427,7 +426,7 @@ def prepare_cfg(config: dict[str, Any],
             if line.startswith("  uci set aria2.main.bt_tracker="):
                 f.write(f"  uci set aria2.main.bt_tracker='{bt_tracker}'\n")
             elif line.startswith("uci set network.lan.ipaddr="):
-                f.write(f"uci set network.lan.ipaddr='{config["openwrtext"]["ipaddr"]}'\n")
+                f.write(f"uci set network.lan.ipaddr='{config['openwrtext']['ipaddr']}'\n")
             elif "Compiled by 沉默の金" in line:
                 f.write(line.replace("Compiled by 沉默の金", f"Compiled by {compiler}") + "\n")
             else:
@@ -443,7 +442,7 @@ def prepare_cfg(config: dict[str, Any],
             elif "set system.@system[-1].timezone='UTC'" in line:
                 f.write(line.replace("set system.@system[-1].timezone='UTC'",
                                      f"set system.@system[-1].timezone='{config['openwrtext']['timezone']}'") +
-                                     f"\n		set system.@system[-1].zonename='{config["openwrtext"]["zonename"]}'\n")
+                                     f"\n		set system.@system[-1].zonename='{config['openwrtext']['zonename']}'\n")
             else:
                 f.write(line + "\n")
 
@@ -451,7 +450,8 @@ def prepare_cfg(config: dict[str, Any],
 
     with open(os.path.join(openwrt.files, "etc", "openwrt-k_info"), "w", encoding="utf-8") as f:
         content = ""
-        content += f'COMPILE_START_TIME="{datetime.now(timezone(timedelta(hours=8))).strftime('%y.%m.%d-%H')}"\n'
+        compile_time = datetime.now(timezone(timedelta(hours=8))).strftime("%y.%m.%d-%H")
+        content += f'COMPILE_START_TIME="{compile_time}"\n'
         content += f'COMPILER="{compiler}"\n'
         content += f'REPOSITORY_URL="https://github.com/{user_repo}"\n'
         content += f'TAG_SUFFIX="{get_release_suffix(config)[1]}"\n'

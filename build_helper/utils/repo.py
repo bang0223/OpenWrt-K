@@ -10,6 +10,7 @@ import github.GitRelease
 import httpx
 import pygit2
 from actions_toolkit.github import Context, get_octokit
+from typing import Dict, Optional, Tuple
 
 from .downloader import dl2, wait_dl_tasks
 from .logger import logger
@@ -72,13 +73,13 @@ def del_cache(key_prefix: str) -> None:
     else:
         logger.error('Failed to get caches list')
 
-def get_release_suffix(cfg: dict) -> tuple[str, str]:
-    release_suffix = f"({cfg["target"]}-{cfg["subtarget"]})-[{cfg["compile"]["openwrt_tag/branch"]}]"
-    tag_suffix = f"({cfg["target"]}-{cfg["subtarget"]})-({cfg["compile"]["openwrt_tag/branch"]})-{cfg["name"]}"
+def get_release_suffix(cfg: dict) -> Tuple[str, str]:
+    release_suffix = f"({cfg['target']}-{cfg['subtarget']})-[{cfg['compile']['openwrt_tag/branch']}]"
+    tag_suffix = f"({cfg['target']}-{cfg['subtarget']})-({cfg['compile']['openwrt_tag/branch']})-{cfg['name']}"
     return release_suffix, tag_suffix
 
 
-def parse_openwrt_branch_version(branch: str) -> tuple[int, int, int] | None:
+def parse_openwrt_branch_version(branch: str) -> Optional[Tuple[int, int, int]]:
     match = re.match(r"^v?(?P<major>\d+)\.(?P<minor>\d+)(?:\.(?P<patch>\d+))?$", branch.strip())
     if not match:
         return None
@@ -149,7 +150,7 @@ def new_release(cfg: dict, assets: list[str], body: str) -> None:
         logger.exception("删除旧版本失败")
 
 
-def match_releases(cfg: dict) -> github.GitRelease.GitRelease | None:
+def match_releases(cfg: dict) -> Optional[github.GitRelease.GitRelease]:
     _, suffix = get_release_suffix(cfg)
 
     releases = repo.get_releases()

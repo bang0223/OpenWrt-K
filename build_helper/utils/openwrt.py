@@ -5,7 +5,7 @@ import re
 import shutil
 import subprocess
 import tarfile
-from typing import Literal
+from typing import Dict, List, Optional, Tuple
 
 import pygit2
 from actions_toolkit import core
@@ -20,7 +20,7 @@ class OpenWrtBase:
         self.path = path
         self.files = os.path.join(path, 'files')
 
-    def get_arch(self) -> tuple[str | None, str | None]:
+    def get_arch(self) -> Tuple[Optional[str], Optional[str]]:
         arch = None
         version = None
         if os.path.isfile(os.path.join(self.path, '.config')):
@@ -44,7 +44,7 @@ class OpenWrtBase:
         with open(os.path.join(self.path, '.config'), 'w') as f:
             f.write(config)
 
-    def get_target(self) -> tuple[str | None, str | None]:
+    def get_target(self) -> Tuple[Optional[str], Optional[str]]:
         target, subtarget = None, None
         if os.path.isfile(os.path.join(self.path, '.config')):
             with open(os.path.join(self.path, '.config')) as f:
@@ -79,7 +79,7 @@ class OpenWrtBase:
                 logger.error("编译失败，请检查错误信息")
                 raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, result.stderr)
 class OpenWrt(OpenWrtBase):
-    def __init__(self, path: str, tag_branch: str | None = None) -> None:
+    def __init__(self, path: str, tag_branch: Optional[str] = None) -> None:
         super().__init__(path)
         if os.path.isdir(os.path.join(path, ".git")):
             self.repo = pygit2.Repository(self.path)
@@ -151,7 +151,7 @@ class OpenWrt(OpenWrtBase):
     def get_diff_config(self) -> str:
         return subprocess.run([os.path.join(self.path, "scripts", "diffconfig.sh")], cwd=self.path, capture_output=True, text=True).stdout
 
-    def get_kernel_version(self) -> str | None:
+    def get_kernel_version(self) -> Optional[str]:
         kernel_version = None
         if os.path.isfile(os.path.join(self.path, '.config')):
             with open(os.path.join(self.path, '.config')) as f:
@@ -159,18 +159,18 @@ class OpenWrt(OpenWrtBase):
                     if line.startswith('CONFIG_LINUX_'):
                         match = re.match(r'^CONFIG_LINUX_(?P<major>[0-9]+)_(?P<minor>[0-9]+)=y$', line)
                         if match:
-                            kernel_version = f"{match.group("major")}.{match.group("minor")}"
+                            kernel_version = f"{match.group('major')}.{match.group('minor')}"
                             break
         logger.debug("配置%s的内核版本为%s", self.path, kernel_version)
         return kernel_version
 
-    def get_package_config(self, package: str) -> Literal["y", "n", "m"] | None:
+    def get_package_config(self, package: str) -> Optional[Literal["y", "n", "m"]]:
         package_config = None
         if os.path.isfile(os.path.join(self.path, '.config')):
             with open(os.path.join(self.path, '.config')) as f:
                 for line in f:
                     if line.startswith(f'CONFIG_PACKAGE_{package}='):
-                        match = re.match(fr'^CONFIG_PACKAGE_{package}=(?P<config>[ymn])$', line)
+                        match = re.match(r'^CONFIG_PACKAGE_%s=(?P<config>[ymn])$' % re.escape(package), line)
                         if match:
                             package_config = match.group("config")
                             if  package_config in ("y", "n", "m"):
