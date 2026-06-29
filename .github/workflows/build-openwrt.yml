@@ -187,4 +187,8 @@ jobs:
 
       - name: 上传
         if: success() || failure()
+<<<<<<< HEAD
         uses: ./.github/action/upload
+=======
+        uses: ./.github/action/upload
+>>>>>>> origin/main
